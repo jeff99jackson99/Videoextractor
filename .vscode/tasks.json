@@ -1,0 +1,125 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Setup Development Environment",
+            "type": "shell",
+            "command": "make",
+            "args": ["setup"],
+            "group": "build",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared"
+            }
+        },
+        {
+            "label": "Run Development Servers",
+            "type": "shell",
+            "command": "make",
+            "args": ["dev"],
+            "group": "build",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared"
+            },
+            "isBackground": true
+        },
+        {
+            "label": "Run FastAPI Server",
+            "type": "shell",
+            "command": "make",
+            "args": ["dev-api"],
+            "group": "build",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared"
+            },
+            "isBackground": true
+        },
+        {
+            "label": "Run Streamlit App",
+            "type": "shell",
+            "command": "make",
+            "args": ["dev-streamlit"],
+            "group": "build",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared"
+            },
+            "isBackground": true
+        },
+        {
+            "label": "Run Tests",
+            "type": "shell",
+            "command": "make",
+            "args": ["test"],
+            "group": "test",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared"
+            }
+        },
+        {
+            "label": "Lint Code",
+            "type": "shell",
+            "command": "make",
+            "args": ["lint"],
+            "group": "build",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared"
+            }
+        },
+        {
+            "label": "Format Code",
+            "type": "shell",
+            "command": "make",
+            "args": ["fmt"],
+            "group": "build",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared"
+            }
+        },
+        {
+            "label": "Build Docker Image",
+            "type": "shell",
+            "command": "make",
+            "args": ["docker/build"],
+            "group": "build",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared"
+            }
+        },
+        {
+            "label": "Validate Environment",
+            "type": "shell",
+            "command": "make",
+            "args": ["validate"],
+            "group": "build",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared"
+            }
+        }
+    ]
+}
