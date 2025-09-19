@@ -3,11 +3,11 @@
 import os
 import streamlit as st
 import requests
-import tempfile
-from pathlib import Path
-import json
 from typing import Optional, Dict, Any
-import time
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
 
 # Configure Streamlit page
 st.set_page_config(
@@ -17,19 +17,76 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# API Configuration
+# API Configuration - for demo purposes, we'll simulate the API
 API_BASE_URL = os.getenv("API_BASE_URL", "http://localhost:8000")
+DEMO_MODE = True  # Enable demo mode for Streamlit Cloud deployment
 
 def check_api_health() -> bool:
     """Check if the FastAPI backend is running."""
+    if DEMO_MODE:
+        return False  # API not available in demo mode
     try:
         response = requests.get(f"{API_BASE_URL}/healthz", timeout=5)
         return response.status_code == 200
     except requests.exceptions.RequestException:
         return False
 
+def simulate_video_processing(video_file) -> Dict[str, Any]:
+    """Simulate video processing for demo mode."""
+    import time
+    
+    # Simulate processing time
+    progress_bar = st.progress(0)
+    status_text = st.empty()
+    
+    for i in range(100):
+        progress_bar.progress(i + 1)
+        if i < 30:
+            status_text.text("🎵 Extracting audio...")
+        elif i < 70:
+            status_text.text("🗣️ Transcribing speech...")
+        else:
+            status_text.text("🤖 Generating summary...")
+        time.sleep(0.05)
+    
+    # Return simulated results
+    sample_transcript = """Welcome to our video presentation. Today we'll be discussing the importance of artificial intelligence in modern business applications. 
+
+AI has revolutionized how we process data, make decisions, and interact with customers. Machine learning algorithms can analyze vast amounts of information in seconds, providing insights that would take humans hours or days to discover.
+
+In this presentation, we covered three main topics: data processing, decision making, and customer interaction. We also discussed the implementation challenges and future opportunities in AI development.
+
+The key takeaways are that AI is not just a trend, but a fundamental shift in how businesses operate. Companies that adopt AI early will have significant competitive advantages."""
+
+    sample_summary = """**Video Summary**
+
+This presentation focused on artificial intelligence in business applications. The main points covered were:
+
+**Key Topics:**
+- Data processing capabilities of AI
+- AI-driven decision making
+- Customer interaction improvements
+
+**Main Benefits:**
+- Rapid analysis of large datasets
+- Insights generation in seconds vs hours
+- Competitive advantages for early adopters
+
+**Conclusion:**
+AI represents a fundamental shift in business operations, not just a temporary trend. Early adoption provides significant competitive advantages."""
+
+    return {
+        "transcript": sample_transcript,
+        "summary": sample_summary,
+        "processing_time": 5.0,
+        "video_duration": 180.0  # 3 minutes
+    }
+
 def upload_and_process_video(video_file) -> Optional[Dict[str, Any]]:
     """Upload video file to API and get processing results."""
+    if DEMO_MODE:
+        return simulate_video_processing(video_file)
+    
     try:
         files = {"file": (video_file.name, video_file.read(), video_file.type)}
         
@@ -63,22 +120,42 @@ def main():
     # Sidebar
     with st.sidebar:
         st.header("📋 Instructions")
-        st.markdown("""
-        1. **Upload** a video file (MP4, MOV, AVI, etc.)
-        2. **Wait** for processing (may take several minutes)
-        3. **Download** your transcript and summary files
-        
-        **Features:**
-        - 🎵 Audio extraction from video
-        - 📝 Speech-to-text transcription
-        - 🤖 AI-powered summary generation
-        - 📄 Downloadable results
-        """)
+        if DEMO_MODE:
+            st.info("🎭 **Demo Mode Active**")
+            st.markdown("""
+            This is a **demonstration version** of the Video Extractor app.
+            
+            1. **Upload** any video file to see the interface
+            2. **Experience** the simulated processing workflow
+            3. **Download** sample transcript and summary files
+            
+            **Demo Features:**
+            - 🎵 Simulated audio extraction
+            - 📝 Sample transcription output
+            - 🤖 Example AI summary generation
+            - 📄 Downloadable demo results
+            
+            *For full functionality with real video processing, deploy the complete application with FastAPI backend.*
+            """)
+        else:
+            st.markdown("""
+            1. **Upload** a video file (MP4, MOV, AVI, etc.)
+            2. **Wait** for processing (may take several minutes)
+            3. **Download** your transcript and summary files
+            
+            **Features:**
+            - 🎵 Audio extraction from video
+            - 📝 Speech-to-text transcription
+            - 🤖 AI-powered summary generation
+            - 📄 Downloadable results
+            """)
         
         st.header("⚙️ Settings")
         
         # API Health Check
-        if check_api_health():
+        if DEMO_MODE:
+            st.warning("🎭 Demo Mode - API Not Required")
+        elif check_api_health():
             st.success("✅ API Connected")
         else:
             st.error("❌ API Disconnected")
