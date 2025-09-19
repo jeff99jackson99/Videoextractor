@@ -5,10 +5,13 @@ A powerful video processing application that extracts audio, generates transcrip
 ## ✨ Features
 
 - 🎵 **Audio Extraction**: Extract high-quality audio from video files using FFmpeg
+- 🔇 **Smart Silence Removal**: Automatically detect and remove silence to reduce processing time and costs
 - 📝 **Speech-to-Text**: Generate accurate transcripts using OpenAI Whisper
 - 🤖 **AI Summarization**: Create intelligent summaries using GPT models
+- 📊 **Processing Efficiency**: Real-time statistics showing silence removal and time savings
 - 🌐 **Web Interface**: User-friendly Streamlit frontend for easy video upload
 - 🚀 **REST API**: FastAPI backend for programmatic access
+- 📁 **Large File Support**: Handle video files up to 2GB
 - 🐳 **Docker Support**: Containerized deployment with multi-stage builds
 - 🔄 **CI/CD Pipeline**: Automated testing and releases via GitHub Actions
 
@@ -185,7 +188,10 @@ docker-compose -f docker-compose.prod.yml up -d
 | `API_BASE_URL` | FastAPI base URL | `http://localhost:8000` |
 | `DEBUG` | Enable debug mode | `true` |
 | `LOG_LEVEL` | Logging level | `info` |
-| `MAX_FILE_SIZE_MB` | Max upload size (MB) | `500` |
+| `MAX_FILE_SIZE_MB` | Max upload size (MB) | `2000` |
+| `SILENCE_THRESHOLD` | Silence detection threshold | `-30dB` |
+| `SILENCE_DURATION` | Min silence duration to detect | `0.5` |
+| `AUDIO_PADDING` | Padding around speech segments | `0.2` |
 
 ## 🚀 Deployment
 

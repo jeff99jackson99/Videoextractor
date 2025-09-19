@@ -17,6 +17,10 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
+# Configure Streamlit for large file uploads
+# Note: Streamlit Cloud has a 200MB limit, but we can configure for larger files in self-hosted deployments
+MAX_FILE_SIZE_MB = int(os.getenv("MAX_FILE_SIZE_MB", "2000"))  # 2GB default
+
 # API Configuration - for demo purposes, we'll simulate the API
 API_BASE_URL = os.getenv("API_BASE_URL", "http://localhost:8000")
 DEMO_MODE = True  # Enable demo mode for Streamlit Cloud deployment
@@ -79,7 +83,9 @@ AI represents a fundamental shift in business operations, not just a temporary t
         "transcript": sample_transcript,
         "summary": sample_summary,
         "processing_time": 5.0,
-        "video_duration": 180.0  # 3 minutes
+        "video_duration": 180.0,  # 3 minutes original
+        "optimized_duration": 95.0,  # 1.6 minutes after silence removal
+        "silence_removed_percent": 47.2  # 47% silence removed
     }
 
 def upload_and_process_video(video_file) -> Optional[Dict[str, Any]]:
@@ -167,12 +173,16 @@ def main():
     with col1:
         st.header("📁 Upload Video")
         
-        # File uploader
+        # File uploader with large file support
         uploaded_file = st.file_uploader(
             "Choose a video file",
-            type=['mp4', 'mov', 'avi', 'mkv', 'wmv', 'flv', 'webm'],
-            help="Supported formats: MP4, MOV, AVI, MKV, WMV, FLV, WebM"
+            type=['mp4', 'mov', 'avi', 'mkv', 'wmv', 'flv', 'webm', 'm4v', '3gp'],
+            help=f"Supported formats: MP4, MOV, AVI, MKV, WMV, FLV, WebM, M4V, 3GP\n\nMax file size: {MAX_FILE_SIZE_MB}MB"
         )
+        
+        # Large file warning for Streamlit Cloud
+        if DEMO_MODE:
+            st.warning("⚠️ **Streamlit Cloud Limitation**: Files over 200MB cannot be uploaded on Streamlit Cloud. For larger files, deploy the app locally or on a custom server.")
         
         if uploaded_file is not None:
             # Display video info
@@ -215,11 +225,42 @@ def main():
             result = st.session_state['processing_result']
             
             # Display metrics
-            st.metric("Video Duration", f"{result.get('video_duration', 0):.1f}s")
-            st.metric("Processing Time", f"{result.get('processing_time', 0):.1f}s")
+            col_stat1, col_stat2 = st.columns(2)
+            with col_stat1:
+                st.metric("Original Duration", f"{result.get('video_duration', 0):.1f}s")
+                st.metric("Processing Time", f"{result.get('processing_time', 0):.1f}s")
+            
+            with col_stat2:
+                optimized_duration = result.get('optimized_duration', 0)
+                silence_percent = result.get('silence_removed_percent', 0)
+                
+                st.metric(
+                    "Optimized Duration", 
+                    f"{optimized_duration:.1f}s",
+                    delta=f"-{result.get('video_duration', 0) - optimized_duration:.1f}s"
+                )
+                st.metric(
+                    "Silence Removed", 
+                    f"{silence_percent:.1f}%",
+                    help="Percentage of silence removed for efficient processing"
+                )
+            
+            # Efficiency visualization
+            if silence_percent > 0:
+                st.subheader("🎯 Processing Efficiency")
+                efficiency_col1, efficiency_col2 = st.columns([3, 1])
+                with efficiency_col1:
+                    # Progress bar showing speech vs silence
+                    speech_percent = 100 - silence_percent
+                    st.progress(speech_percent / 100, f"Speech: {speech_percent:.1f}%")
+                    st.progress(silence_percent / 100, f"Silence Removed: {silence_percent:.1f}%")
+                
+                with efficiency_col2:
+                    time_saved = result.get('video_duration', 0) - optimized_duration
+                    st.metric("Time Saved", f"{time_saved:.1f}s")
             
             # Progress indicator
-            st.progress(1.0, "Complete")
+            st.success("✅ Complete")
         else:
             st.info("Upload a video to see processing statistics")
     

@@ -6,18 +6,32 @@ from pathlib import Path
 from typing import Dict, Any
 
 import aiofiles
-from fastapi import FastAPI, File, UploadFile, HTTPException
+from fastapi import FastAPI, File, UploadFile, HTTPException, Request
 from fastapi.responses import JSONResponse
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 from .services.video_processor import VideoProcessor
 from .services.transcription import TranscriptionService
 from .services.summarization import SummarizationService
 
+# Configuration for large file uploads
+MAX_FILE_SIZE_MB = int(os.getenv("MAX_FILE_SIZE_MB", "2000"))  # 2GB default
+MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024
+
 app = FastAPI(
     title="Video Extractor API",
     description="Extract audio, generate transcripts and summaries from videos",
     version="0.1.0"
+)
+
+# Add CORS middleware for cross-origin requests
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Configure appropriately for production
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 # Initialize services
@@ -32,6 +46,8 @@ class ProcessingResult(BaseModel):
     summary: str
     processing_time: float
     video_duration: float
+    optimized_duration: float = 0.0  # Duration after silence removal
+    silence_removed_percent: float = 0.0  # Percentage of silence removed
 
 
 @app.get("/healthz")
@@ -54,6 +70,14 @@ async def root() -> Dict[str, str]:
     }
 
 
+async def validate_file_size(file: UploadFile) -> None:
+    """Validate file size before processing."""
+    if file.size and file.size > MAX_FILE_SIZE_BYTES:
+        raise HTTPException(
+            status_code=413,
+            detail=f"File too large. Maximum size allowed: {MAX_FILE_SIZE_MB}MB"
+        )
+
 @app.post("/upload-video", response_model=ProcessingResult)
 async def upload_and_process_video(
     file: UploadFile = File(...)
@@ -67,6 +91,9 @@ async def upload_and_process_video(
     Returns:
         ProcessingResult with transcript, summary, and metadata
     """
+    # Validate file size
+    await validate_file_size(file)
+    
     # Validate file type
     if not file.content_type or not file.content_type.startswith('video/'):
         raise HTTPException(
@@ -85,13 +112,22 @@ async def upload_and_process_video(
             await f.write(content)
         
         try:
-            # Extract audio from video
-            audio_path = await video_processor.extract_audio(video_path)
-            
-            # Get video metadata
+            # Get video metadata first
             video_info = await video_processor.get_video_info(video_path)
             
-            # Transcribe audio
+            # Extract audio with silence removal for efficient processing
+            audio_path = await video_processor.extract_audio_with_silence_removal(video_path)
+            
+            # Get optimized audio duration
+            optimized_duration = await video_processor._get_audio_duration(audio_path)
+            
+            # Calculate silence removal efficiency
+            original_duration = video_info.get("duration", 0.0)
+            silence_removed_percent = 0.0
+            if original_duration > 0:
+                silence_removed_percent = ((original_duration - optimized_duration) / original_duration) * 100
+            
+            # Transcribe optimized audio (much faster!)
             transcript = await transcription_service.transcribe_audio(audio_path)
             
             # Generate summary
@@ -101,7 +137,9 @@ async def upload_and_process_video(
                 transcript=transcript,
                 summary=summary,
                 processing_time=0.0,  # TODO: Add timing
-                video_duration=video_info.get("duration", 0.0)
+                video_duration=original_duration,
+                optimized_duration=optimized_duration,
+                silence_removed_percent=silence_removed_percent
             )
             
         except Exception as e:
